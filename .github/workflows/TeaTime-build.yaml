@@ -1,0 +1,52 @@
+# To better understand this file read this:
+# https://docs.ionos.space/docs/github-actions-customization/
+
+name: "Deploy Now: Execute Build"
+
+on:
+  workflow_call:
+    inputs:
+      site-url:
+        required: true
+        type: string
+      branch-id:
+        required: true
+        type: string
+
+env:
+  DEPLOYMENT_FOLDER: ./client/dist
+
+jobs:
+# Please do not rename this job
+  build-project:
+    name: build TeaTime
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Run script
+        env:
+          CLOUDINARY_UPLOAD_URL: https://api.cloudinary.com/v1_1/dcaivdnrk/image/upload
+          JWT_SECRET: your_jwt_secret
+          MONGODB_URI: mongodb+srv://testing:k97jiEudPNwq8BX7@cluster0.idgugge.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+          VITE_CLOUDINARY_UPLOAD_URL: https://api.cloudinary.com/v1_1/dcaivdnrk/image/upload
+        run: |
+          cd server && npm i && cd ../client && npm i
+          cd client && npm run build && cd ../server && npm run build
+          node server/dist/server.js
+
+# Please do not touch the following action
+      - name: Store deployment content
+        uses: ionos-deploy-now/artifact-action@v1
+        with:
+          api-key: ${{ secrets.IONOS_API_KEY }}
+          service-host: api-us.ionos.space
+          project-id: c9e348d1-0de6-44f0-8d35-4078d26c7552
+          branch-id: ${{ inputs.branch-id }}
+          version: ${{ github.sha }}
+          folder: ${{ env.DEPLOYMENT_FOLDER }}
+          config-file: .deploy-now/TeaTime/config.yaml
+          action: upload
