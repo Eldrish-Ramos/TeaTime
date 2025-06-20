@@ -1,0 +1,67 @@
+# To better understand this file read this:
+# https://docs.ionos.space/docs/github-actions-customization/
+
+name: "Deploy Now: Execute Build"
+
+on:
+  workflow_call:
+    inputs:
+      site-url:
+        required: true
+        type: string
+      branch-id:
+        required: true
+        type: string
+
+env:
+  DEPLOYMENT_FOLDER: ./client/dist
+
+jobs:
+# Please do not rename this job
+  build-project:
+    name: build TeaTime
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Run script
+        env:
+          CLOUDINARY_UPLOAD_URL: https://api.cloudinary.com/v1_1/dcaivdnrk/image/upload
+          JWT_SECRET: your_jwt_secret
+          MONGODB_URI: mongodb+srv://testing:k97jiEudPNwq8BX7@cluster0.idgugge.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+        run: cd server && npm install && npm run build
+
+      - name: Run script
+        env:
+          VITE_CLOUDINARY_UPLOAD_URL: https://api.cloudinary.com/v1_1/dcaivdnrk/image/upload
+        run: cd ../client && npm install && npm run build
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: v22.x
+
+      - name: Build Node assets
+        env:
+          CI: true
+          CLOUDINARY_UPLOAD_URL: https://api.cloudinary.com/v1_1/dcaivdnrk/image/upload
+          JWT_SECRET: your_jwt_secret
+          MONGODB_URI: mongodb+srv://testing:k97jiEudPNwq8BX7@cluster0.idgugge.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+          SITE_URL: ${{ inputs.site-url }}
+        run: cd ../server && node dist/server.js
+
+# Please do not touch the following action
+      - name: Store deployment content
+        uses: ionos-deploy-now/artifact-action@v1
+        with:
+          api-key: ${{ secrets.IONOS_API_KEY }}
+          service-host: api-us.ionos.space
+          project-id: 6357025b-2fb3-4680-8f60-963ab1ecbe94
+          branch-id: ${{ inputs.branch-id }}
+          version: ${{ github.sha }}
+          folder: ${{ env.DEPLOYMENT_FOLDER }}
+          config-file: .deploy-now/TeaTime/config.yaml
+          action: upload
